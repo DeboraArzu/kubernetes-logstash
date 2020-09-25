@@ -4,7 +4,7 @@ home: https://github.com/elastic/helm-charts
 maintainers:
 - email: helm-charts@elastic.co
   name: Elastic
-name: logstash1
+name: logstash
 version: 8.0.0-SNAPSHOT
 appVersion: 8.0.0-SNAPSHOT
 sources:

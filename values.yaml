@@ -1,5 +1,5 @@
 ---
-replicas: 1
+replicas: 2
 
 # Allows you to add any config files in /usr/share/logstash/config/
 # such as logstash.yml and log4j2.properties
@@ -16,6 +16,41 @@ logstashConfig:
 ### ***warn*** there is a hardcoded logstash.conf in the image, override it first
 logstashPipeline:
   uptime.conf: |
+    input {
+      kafka{
+        group_id => "project-analytic-staging"
+        topics_pattern => "event_.*"
+        bootstrap_servers => "192.168.116.31:9092"
+        codec => json
+        auto_offset_reset => "earliest"
+        metadata_max_age_ms => 10000
+        decorate_events => true
+      }
+    }
+
+    filter {
+      geoip {
+        source => "ip-address"
+      }
+
+      useragent {
+        source => "user-agent"
+      }
+
+      date {
+        match => ["[timestamp]", "ISO8601"]
+        timezone => "UTC"
+      }
+
+      mutate {
+        remove_field => ["timestamp"]
+      }
+
+      ruby {
+        code => 'event.cancel if Time.now.utc.strftime("%Y-%m-%d") != Time.at(event.get("@timestamp").to_i).strftime("%Y-%m-%d")'
+      }
+    }
+
     output { elasticsearch { hosts => ["https://search-insticator-elk-stage-uwe3pejtcay2kio6ssf3n2oegu.us-east-1.es.amazonaws.com:443"] ssl => true index => "logstash"  ilm_enabled => false } }
 
 # Extra environment variables to append to this nodeGroup
