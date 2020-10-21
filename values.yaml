@@ -16,11 +16,7 @@ logstashConfig:
 ### ***warn*** there is a hardcoded logstash.conf in the image, override it first
 logstashPipeline:
   uptime.conf: |
-    input {
-      beats {
-        port => "5140"
-      }
-    }
+    input { stdin { } }
 
     filter {
       grok {
@@ -31,7 +27,7 @@ logstashPipeline:
         remove_field => ["message"]
       }
     
-      date {
+      date {      
         match => ["timestamp", "yyyy-MM-dd HH:mm:ss.SSSSSSZ"]
         timezone => "UTC"
         target => "@timestamp"
@@ -49,7 +45,7 @@ logstashPipeline:
       }
     }
 
-    output { elasticsearch { hosts => ["search-insticator-logs-stage-622u6mgwrmk7ka6tazygriw3lq.us-east-1.es.amazonaws.com:443"] ssl => true index => "logstash" ilm_enabled => false } }
+    output { elasticsearch { hosts => ["search-insticator-logs-stage-622u6mgwrmk7ka6tazygriw3lq.us-east-1.es.amazonaws.com:443"] ssl => true index => "logs_%{[fields][application]}_%{+YYYY-MM-dd}"  ilm_enabled => false } }
 
 # Extra environment variables to append to this nodeGroup
 # This will be appended to the current 'env:' key. You can use any of the kubernetes env
