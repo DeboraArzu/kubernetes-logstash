@@ -1,0 +1,46 @@
+input {
+  beats {
+    port => "5044"
+  }
+}
+
+filter {
+  grok {
+    match => { "message" => ["%{TIMESTAMP_ISO8601:log-timestamp}%{SPACE}%{LOGLEVEL:log-level}%{SPACE}\[%{DATA:dispatcher}\]%{SPACE}%{DATA:function}%{SPACE}--%{SPACE}%{GREEDYDATA:log-message}"]}
+  }
+
+  mutate {
+    remove_field => ["message"]
+  }
+
+  date {
+    #match => ["log-timestamp", "ISO8601", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm:ss.S", "yyyy-MM-dd HH:mm:ss.SS", "yyyy-MM-dd HH:mm:ss.SSS"]
+    match => ["timestamp", "yyyy-MM-dd HH:mm:ss.SSSSSSZ"]
+    timezone => "UTC"
+    target => "@timestamp"
+    
+  }
+
+  mutate {
+    add_field => {
+      "logstash_processed_at" => "%{@timestamp}"
+    }
+    #remove_field => ["timestamp"]
+    #convert => ["logstash_processed_at", "string"]
+  }
+
+  ruby {
+    #code => "require 'date';event.set('logstash_processed_at', DateTime.parse(Time.at((1000000*event.get('@timestamp').to_f).round(0)).to_s))"
+    #code => "require 'date'; require 'time';event.set('logstash_processed_at', Time.at(event.get('@timestamp').to_f.round(0)).iso8601(6).to_s)"
+   code => "event.set('logstash_processed_at', Time.now.iso8601(6))"
+  }
+}
+
+output {
+  if "_grokparsefailure" not in [tags] {
+    elasticsearch {
+      hosts => ["search-staging-snlmyvywvdwreu2dkcjyjue3ku.us-east-1.es.amazonaws.com:80"]
+      index => "logs_%{[fields][application]}_%{+YYYY-MM-dd}"
+    }
+  }
+}
